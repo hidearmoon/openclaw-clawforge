@@ -1,0 +1,91 @@
+"""
+{{ plugin_name }} — OpenClaw Tool Plugin
+{{ description }}
+
+Author : {{ author }}
+Version: {{ version }}
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+
+class IPlugin:
+    """Minimal IPlugin interface stub (provided by OpenClaw runtime at load-time)."""
+
+    def init(self, config: dict[str, Any]) -> None: ...
+    def run(self, payload: dict[str, Any]) -> Any: ...
+    def shutdown(self) -> None: ...
+
+
+class {{ class_name }}(IPlugin):
+    """
+    {{ description }}
+
+    Plugin type : tool
+    Entry point : {{ module_name }}:{{ class_name }}
+    """
+
+    #: Default configuration values — overridden by openclaw.plugin.json > config
+    DEFAULT_CONFIG: dict[str, Any] = {
+        # "api_key": "",
+        # "timeout": 10,
+    }
+
+    def __init__(self) -> None:
+        self.config: dict[str, Any] = {}
+        self._ready: bool = False
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Lifecycle
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def init(self, config: dict[str, Any]) -> None:
+        """Called once by OpenClaw after the plugin is loaded.
+
+        Args:
+            config: Merged config from openclaw.plugin.json and user settings.
+        """
+        self.config = {**self.DEFAULT_CONFIG, **config}
+        # TODO: validate required config keys, set up clients, etc.
+        self._ready = True
+        logger.info("[{{ plugin_name }}] initialized with config keys: %s", list(self.config.keys()))
+
+    def run(self, payload: dict[str, Any]) -> Any:
+        """Main invocation entry point — called by OpenClaw when the tool is triggered.
+
+        Args:
+            payload: Arbitrary dict from the caller (e.g. function-call arguments).
+
+        Returns:
+            Result to be passed back to the LLM / caller.
+        """
+        if not self._ready:
+            raise RuntimeError("Plugin not initialized. Call init() first.")
+
+        logger.debug("[{{ plugin_name }}] run called with payload: %s", payload)
+
+        # ── TODO: implement your tool logic here ──────────────────────────────
+        result = self._handle(payload)
+        # ─────────────────────────────────────────────────────────────────────
+
+        return result
+
+    def shutdown(self) -> None:
+        """Called by OpenClaw before the plugin is unloaded / process exits."""
+        self._ready = False
+        # TODO: close connections, flush buffers, release resources
+        logger.info("[{{ plugin_name }}] shut down.")
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Internal helpers
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def _handle(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Core business logic — replace this with real implementation."""
+        # Example: echo the payload back
+        return {"echo": payload, "plugin": "{{ plugin_name }}", "status": "ok"}

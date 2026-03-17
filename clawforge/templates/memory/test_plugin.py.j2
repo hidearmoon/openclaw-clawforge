@@ -1,0 +1,65 @@
+"""
+Tests for {{ plugin_name }} (memory plugin).
+Run with: pytest
+"""
+
+import pytest
+from {{ module_name }} import {{ class_name }}
+
+
+@pytest.fixture
+def plugin() -> {{ class_name }}:
+    p = {{ class_name }}()
+    p.init({})
+    return p
+
+
+class TestInit:
+    def test_init_succeeds(self):
+        p = {{ class_name }}()
+        p.init({})
+        assert p._ready is True
+
+
+class TestStore:
+    def test_store_returns_id(self, plugin):
+        result = plugin.run({
+            "action": "store",
+            "session_id": "s1",
+            "content": "OpenClaw is great",
+        })
+        assert "id" in result
+        assert result["status"] == "stored"
+
+    def test_recall_returns_stored_item(self, plugin):
+        plugin.run({"action": "store", "session_id": "s1", "content": "test content"})
+        result = plugin.run({"action": "recall", "session_id": "s1", "query": "test"})
+        assert len(result["items"]) >= 1
+
+    def test_delete_removes_item(self, plugin):
+        stored = plugin.run({"action": "store", "session_id": "s1", "content": "to delete"})
+        item_id = stored["id"]
+        result = plugin.run({"action": "delete", "item_id": item_id})
+        assert result["found"] is True
+        assert result["deleted"] == item_id
+
+    def test_clear_removes_session_items(self, plugin):
+        plugin.run({"action": "store", "session_id": "sess_clear", "content": "item1"})
+        plugin.run({"action": "store", "session_id": "sess_clear", "content": "item2"})
+        result = plugin.run({"action": "clear", "session_id": "sess_clear"})
+        assert result["cleared"] == 2
+
+    def test_run_without_init_raises(self):
+        p = {{ class_name }}()
+        with pytest.raises(RuntimeError, match="not initialized"):
+            p.run({"action": "recall", "query": "test"})
+
+    def test_unknown_action_raises(self, plugin):
+        with pytest.raises(ValueError, match="Unknown memory action"):
+            plugin.run({"action": "unknown"})
+
+
+class TestShutdown:
+    def test_shutdown_marks_not_ready(self, plugin):
+        plugin.shutdown()
+        assert plugin._ready is False

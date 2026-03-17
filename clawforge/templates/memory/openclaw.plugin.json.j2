@@ -1,0 +1,17 @@
+{
+  "name": "{{ plugin_name }}",
+  "version": "{{ version }}",
+  "description": "{{ description }}",
+  "author": "{{ author }}",
+  "type": "memory",
+  "engine": "{{ engine_min }}",
+  "entry": "{{ module_name }}:{{ class_name }}",
+  "permissions": [
+    "fs",
+    "network"
+  ],
+  "config": {
+    "db_path": ":memory:",
+    "collection": "default"
+  }
+}

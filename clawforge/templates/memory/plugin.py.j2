@@ -1,0 +1,146 @@
+"""
+{{ plugin_name }} — OpenClaw Memory Plugin
+{{ description }}
+
+Author : {{ author }}
+Version: {{ version }}
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+
+class IPlugin:
+    """Minimal IPlugin interface stub (provided by OpenClaw runtime at load-time)."""
+
+    def init(self, config: dict[str, Any]) -> None: ...
+    def run(self, payload: dict[str, Any]) -> Any: ...
+    def shutdown(self) -> None: ...
+
+
+class {{ class_name }}(IPlugin):
+    """
+    {{ description }}
+
+    Plugin type : memory
+    Entry point : {{ module_name }}:{{ class_name }}
+
+    A Memory plugin provides a storage backend for OpenClaw's conversation
+    context, long-term memory, and vector similarity search.
+
+    Supported operations (via `run` payload["action"]):
+      - store  : persist a memory item
+      - recall : query stored memories
+      - delete : remove a memory item
+      - clear  : wipe all memories for a session
+    """
+
+    DEFAULT_CONFIG: dict[str, Any] = {
+        # "db_path": ":memory:",
+        # "collection": "default",
+        # "embedding_model": "text-embedding-3-small",
+    }
+
+    def __init__(self) -> None:
+        self.config: dict[str, Any] = {}
+        self._ready: bool = False
+        # Simple in-memory store as placeholder; replace with real backend
+        self._store: dict[str, dict[str, Any]] = {}
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Lifecycle
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def init(self, config: dict[str, Any]) -> None:
+        """Called once by OpenClaw after the plugin is loaded.
+
+        Args:
+            config: Merged config from openclaw.plugin.json and user settings.
+        """
+        self.config = {**self.DEFAULT_CONFIG, **config}
+        # TODO: initialize DB client / vector store connection
+        self._ready = True
+        logger.info("[{{ plugin_name }}] initialized.")
+
+    def run(self, payload: dict[str, Any]) -> Any:
+        """Dispatch a memory operation.
+
+        Args:
+            payload: {
+                "action": "store" | "recall" | "delete" | "clear",
+                "session_id": str,
+                # store:  "content": str, "metadata": dict
+                # recall: "query": str, "top_k": int
+                # delete: "item_id": str
+            }
+
+        Returns:
+            Operation-specific result dict.
+        """
+        if not self._ready:
+            raise RuntimeError("Plugin not initialized. Call init() first.")
+
+        action = payload.get("action", "recall")
+        dispatch = {
+            "store": self._store_item,
+            "recall": self._recall,
+            "delete": self._delete,
+            "clear": self._clear,
+        }
+        handler = dispatch.get(action)
+        if handler is None:
+            raise ValueError(f"Unknown memory action: {action!r}")
+        return handler(payload)
+
+    def shutdown(self) -> None:
+        """Called by OpenClaw before the plugin is unloaded."""
+        self._ready = False
+        # TODO: flush pending writes, close connections
+        logger.info("[{{ plugin_name }}] shut down.")
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Storage operations — replace stubs with real implementation
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def _store_item(self, payload: dict[str, Any]) -> dict[str, Any]:
+        import uuid
+        item_id = str(uuid.uuid4())
+        session = payload.get("session_id", "default")
+        self._store[item_id] = {
+            "id": item_id,
+            "session_id": session,
+            "content": payload.get("content", ""),
+            "metadata": payload.get("metadata", {}),
+        }
+        logger.debug("[{{ plugin_name }}] stored item %s", item_id)
+        return {"id": item_id, "status": "stored"}
+
+    def _recall(self, payload: dict[str, Any]) -> dict[str, Any]:
+        query = payload.get("query", "")
+        top_k = int(payload.get("top_k", 5))
+        session = payload.get("session_id", "default")
+        # TODO: implement real vector/BM25 search
+        results = [
+            item for item in self._store.values()
+            if item.get("session_id") == session
+        ][:top_k]
+        return {"items": results, "query": query}
+
+    def _delete(self, payload: dict[str, Any]) -> dict[str, Any]:
+        item_id = payload.get("item_id", "")
+        removed = self._store.pop(item_id, None)
+        return {"deleted": item_id, "found": removed is not None}
+
+    def _clear(self, payload: dict[str, Any]) -> dict[str, Any]:
+        session = payload.get("session_id", "default")
+        before = len(self._store)
+        self._store = {
+            k: v for k, v in self._store.items()
+            if v.get("session_id") != session
+        }
+        removed = before - len(self._store)
+        return {"cleared": removed, "session_id": session}

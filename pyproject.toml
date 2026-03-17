@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "clawforge"
+version = "0.1.0"
+description = "OpenClaw plugin scaffold, dev sandbox & hot-reload toolkit for plugin developers"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+authors = [{ name = "OpenClaw Labs", email = "labs@openclaw.dev" }]
+keywords = [
+    "openclaw",
+    "plugin",
+    "scaffold",
+    "developer-tool",
+    "cli",
+    "hot-reload",
+    "sandbox",
+    "ai-assistant",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Code Generators",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "click>=8.0",
+    "jinja2>=3.0",
+    "watchdog>=3.0",
+    "rich>=13.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "httpx>=0.24.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/hidearmoon/clawforge"
+Repository = "https://github.com/hidearmoon/clawforge"
+"Bug Tracker" = "https://github.com/hidearmoon/clawforge/issues"
+
+[project.scripts]
+clawforge = "clawforge.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["clawforge*"]
+
+[tool.setuptools.package-data]
+"clawforge.templates" = ["**/*"]

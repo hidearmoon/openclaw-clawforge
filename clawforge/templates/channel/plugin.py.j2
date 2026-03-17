@@ -1,0 +1,118 @@
+"""
+{{ plugin_name }} — OpenClaw Channel Plugin
+{{ description }}
+
+Author : {{ author }}
+Version: {{ version }}
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+from typing import Any, Callable
+
+logger = logging.getLogger(__name__)
+
+
+class IPlugin:
+    """Minimal IPlugin interface stub (provided by OpenClaw runtime at load-time)."""
+
+    def init(self, config: dict[str, Any]) -> None: ...
+    def run(self, payload: dict[str, Any]) -> Any: ...
+    def shutdown(self) -> None: ...
+
+
+class {{ class_name }}(IPlugin):
+    """
+    {{ description }}
+
+    Plugin type : channel
+    Entry point : {{ module_name }}:{{ class_name }}
+
+    A Channel plugin bridges an external messaging platform (e.g. Telegram,
+    Slack, Discord) with OpenClaw's message pipeline.
+    """
+
+    DEFAULT_CONFIG: dict[str, Any] = {
+        # "bot_token": "",
+        # "webhook_url": "",
+        # "poll_interval": 1.0,
+    }
+
+    def __init__(self) -> None:
+        self.config: dict[str, Any] = {}
+        self._ready: bool = False
+        self._on_message: Callable[[dict[str, Any]], None] | None = None
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Lifecycle
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def init(self, config: dict[str, Any]) -> None:
+        """Called once by OpenClaw after the plugin is loaded.
+
+        Args:
+            config: Merged config from openclaw.plugin.json and user settings.
+        """
+        self.config = {**self.DEFAULT_CONFIG, **config}
+        # TODO: create API clients, validate tokens, etc.
+        self._ready = True
+        logger.info("[{{ plugin_name }}] initialized.")
+
+    def run(self, payload: dict[str, Any]) -> Any:
+        """Called by OpenClaw to send a message OUT to the platform.
+
+        Args:
+            payload: {
+                "channel_id": str,  # target channel / chat ID
+                "text": str,        # message text
+                "attachments": list # optional attachments
+            }
+
+        Returns:
+            Platform-specific send receipt or None.
+        """
+        if not self._ready:
+            raise RuntimeError("Plugin not initialized. Call init() first.")
+
+        channel_id = payload.get("channel_id", "")
+        text = payload.get("text", "")
+        logger.debug("[{{ plugin_name }}] sending to %s: %s", channel_id, text[:80])
+
+        # TODO: implement platform send logic
+        return self._send(channel_id, text, payload.get("attachments", []))
+
+    def shutdown(self) -> None:
+        """Called by OpenClaw before the plugin is unloaded."""
+        self._ready = False
+        # TODO: close websocket / long-poll task, cleanup
+        logger.info("[{{ plugin_name }}] shut down.")
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Inbound message handling (called by your polling / webhook loop)
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def register_message_handler(self, handler: Callable[[dict[str, Any]], None]) -> None:
+        """OpenClaw calls this to register an inbound message callback."""
+        self._on_message = handler
+
+    def _dispatch_inbound(self, raw_message: Any) -> None:
+        """Normalize a raw platform message and pass it to OpenClaw."""
+        normalized = {
+            "channel_id": "",       # TODO: extract from raw_message
+            "user_id": "",          # TODO: extract from raw_message
+            "text": "",             # TODO: extract from raw_message
+            "raw": raw_message,
+        }
+        if self._on_message:
+            self._on_message(normalized)
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Internal helpers
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def _send(self, channel_id: str, text: str, attachments: list) -> dict[str, Any]:
+        """Send a message to the platform — replace with real API call."""
+        logger.info("[{{ plugin_name }}] _send(%s): %s", channel_id, text[:80])
+        return {"ok": True, "channel_id": channel_id}

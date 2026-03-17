@@ -1,0 +1,52 @@
+"""
+Tests for {{ plugin_name }} (channel plugin).
+Run with: pytest
+"""
+
+import pytest
+from {{ module_name }} import {{ class_name }}
+
+
+@pytest.fixture
+def plugin() -> {{ class_name }}:
+    p = {{ class_name }}()
+    p.init({})
+    return p
+
+
+class TestInit:
+    def test_init_succeeds(self):
+        p = {{ class_name }}()
+        p.init({})
+        assert p._ready is True
+
+    def test_init_merges_config(self):
+        p = {{ class_name }}()
+        p.init({"bot_token": "test-token"})
+        assert p.config.get("bot_token") == "test-token"
+
+
+class TestRun:
+    def test_run_returns_dict(self, plugin):
+        result = plugin.run({"channel_id": "C123", "text": "hello"})
+        assert isinstance(result, dict)
+        assert result.get("ok") is True
+
+    def test_run_without_init_raises(self):
+        p = {{ class_name }}()
+        with pytest.raises(RuntimeError, match="not initialized"):
+            p.run({"channel_id": "C123", "text": "test"})
+
+
+class TestMessageHandler:
+    def test_register_and_dispatch(self, plugin):
+        received = []
+        plugin.register_message_handler(received.append)
+        plugin._dispatch_inbound({"id": 1, "text": "hi"})
+        assert len(received) == 1
+
+
+class TestShutdown:
+    def test_shutdown_marks_not_ready(self, plugin):
+        plugin.shutdown()
+        assert plugin._ready is False

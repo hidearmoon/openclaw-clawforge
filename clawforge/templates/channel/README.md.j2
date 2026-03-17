@@ -1,0 +1,35 @@
+# {{ plugin_name }}
+
+> {{ description }}
+
+An [OpenClaw](https://github.com/openclaw) **Channel** plugin scaffolded with [ClawForge](https://github.com/hidearmoon/clawforge).
+
+A Channel plugin bridges an external messaging platform with OpenClaw's message pipeline.
+
+## Installation
+
+```bash
+pip install -e .
+```
+
+## Configuration
+
+```json
+{
+  "config": {
+    "bot_token": "YOUR_BOT_TOKEN",
+    "poll_interval": 1.0
+  }
+}
+```
+
+## Development
+
+```bash
+clawforge dev .   # hot-reload sandbox
+pytest            # run tests
+```
+
+## License
+
+MIT © {{ author }}

@@ -1,0 +1,25 @@
+{
+  "name": "{{ plugin_name }}",
+  "version": "{{ version }}",
+  "description": "{{ description }}",
+  "author": "{{ author }}",
+  "type": "provider",
+  "engine": "{{ engine_min }}",
+  "entry": "{{ module_name }}:{{ class_name }}",
+  "permissions": [
+    "network",
+    "env"
+  ],
+  "config": {
+    "api_key": "",
+    "base_url": "https://api.example.com/v1",
+    "default_model": "gpt-4o",
+    "timeout": 30
+  },
+  "capabilities": {
+    "chat_completion": true,
+    "stream_completion": true,
+    "list_models": true,
+    "embeddings": false
+  }
+}

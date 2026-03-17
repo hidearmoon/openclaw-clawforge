@@ -1,0 +1,44 @@
+# {{ plugin_name }}
+
+> {{ description }}
+
+An [OpenClaw](https://github.com/openclaw) **Provider** plugin scaffolded with [ClawForge](https://github.com/hidearmoon/clawforge).
+
+## Capabilities
+
+| Feature | Supported |
+|---------|-----------|
+| Chat Completion | ✅ |
+| Streaming | ✅ |
+| List Models | ✅ |
+| Embeddings | ⬜ (optional) |
+
+## Installation
+
+```bash
+pip install -e .
+```
+
+## Configuration
+
+```json
+{
+  "config": {
+    "api_key": "YOUR_API_KEY",
+    "base_url": "https://api.example.com/v1",
+    "default_model": "gpt-4o",
+    "timeout": 30
+  }
+}
+```
+
+## Development
+
+```bash
+clawforge dev .   # hot-reload sandbox
+pytest            # run tests
+```
+
+## License
+
+MIT © {{ author }}

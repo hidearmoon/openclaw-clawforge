@@ -1,0 +1,47 @@
+# {{ plugin_name }}
+
+> {{ description }}
+
+An [OpenClaw](https://github.com/openclaw) **Tool** plugin scaffolded with [ClawForge](https://github.com/hidearmoon/clawforge).
+
+## Installation
+
+```bash
+pip install -e .
+```
+
+Or add to your OpenClaw `plugins` directory and restart.
+
+## Configuration
+
+Edit `openclaw.plugin.json` to adjust config defaults:
+
+```json
+{
+  "config": {
+    "timeout": 10
+  }
+}
+```
+
+## Development
+
+```bash
+# Start hot-reload sandbox
+clawforge dev .
+
+# Run tests
+pytest
+```
+
+## Plugin Interface
+
+| Method | Description |
+|--------|-------------|
+| `init(config)` | Called once after plugin load |
+| `run(payload)` | Invoked when the tool is triggered |
+| `shutdown()` | Called before plugin unload |
+
+## License
+
+MIT © {{ author }}

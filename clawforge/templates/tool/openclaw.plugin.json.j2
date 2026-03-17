@@ -1,0 +1,29 @@
+{
+  "name": "{{ plugin_name }}",
+  "version": "{{ version }}",
+  "description": "{{ description }}",
+  "author": "{{ author }}",
+  "type": "tool",
+  "engine": "{{ engine_min }}",
+  "entry": "{{ module_name }}:{{ class_name }}",
+  "permissions": [
+    "network"
+  ],
+  "config": {
+    "timeout": 10
+  },
+  "tool_schema": {
+    "name": "{{ plugin_name }}",
+    "description": "{{ description }}",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "string",
+          "description": "Input value for the tool"
+        }
+      },
+      "required": ["input"]
+    }
+  }
+}

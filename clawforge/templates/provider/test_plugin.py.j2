@@ -1,0 +1,70 @@
+"""
+Tests for {{ plugin_name }} (provider plugin).
+Run with: pytest
+"""
+
+import pytest
+from {{ module_name }} import {{ class_name }}
+
+
+@pytest.fixture
+def plugin() -> {{ class_name }}:
+    p = {{ class_name }}()
+    p.init({"default_model": "test-model"})
+    return p
+
+
+MESSAGES = [{"role": "user", "content": "Hello"}]
+
+
+class TestInit:
+    def test_init_succeeds(self):
+        p = {{ class_name }}()
+        p.init({})
+        assert p._ready is True
+
+    def test_init_stores_config(self):
+        p = {{ class_name }}()
+        p.init({"default_model": "my-model"})
+        assert p.config["default_model"] == "my-model"
+
+
+class TestChatCompletion:
+    def test_returns_choices(self, plugin):
+        result = plugin.run({"action": "chat_completion", "messages": MESSAGES})
+        assert "choices" in result
+        assert len(result["choices"]) > 0
+
+    def test_run_without_init_raises(self):
+        p = {{ class_name }}()
+        with pytest.raises(RuntimeError, match="not initialized"):
+            p.run({"action": "chat_completion", "messages": MESSAGES})
+
+    def test_unknown_action_raises(self, plugin):
+        with pytest.raises(ValueError, match="Unknown provider action"):
+            plugin.run({"action": "invalid"})
+
+
+class TestStreamCompletion:
+    def test_yields_chunks(self, plugin):
+        gen = plugin.run({"action": "stream_completion", "messages": MESSAGES})
+        chunks = list(gen)
+        assert len(chunks) > 0
+
+    def test_last_chunk_has_stop(self, plugin):
+        gen = plugin.run({"action": "stream_completion", "messages": MESSAGES})
+        last = list(gen)[-1]
+        assert last["choices"][0]["finish_reason"] == "stop"
+
+
+class TestListModels:
+    def test_returns_model_list(self, plugin):
+        result = plugin.run({"action": "list_models"})
+        assert "models" in result
+        assert isinstance(result["models"], list)
+
+
+class TestShutdown:
+    def test_shutdown_marks_not_ready(self, plugin):
+        plugin.shutdown()
+        assert plugin._ready is False

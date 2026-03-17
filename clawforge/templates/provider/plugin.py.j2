@@ -1,0 +1,168 @@
+"""
+{{ plugin_name }} — OpenClaw Provider Plugin
+{{ description }}
+
+Author : {{ author }}
+Version: {{ version }}
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import Any, Generator
+
+logger = logging.getLogger(__name__)
+
+
+class IPlugin:
+    """Minimal IPlugin interface stub (provided by OpenClaw runtime at load-time)."""
+
+    def init(self, config: dict[str, Any]) -> None: ...
+    def run(self, payload: dict[str, Any]) -> Any: ...
+    def shutdown(self) -> None: ...
+
+
+class {{ class_name }}(IPlugin):
+    """
+    {{ description }}
+
+    Plugin type : provider
+    Entry point : {{ module_name }}:{{ class_name }}
+
+    A Provider plugin adapts an external LLM API to OpenClaw's unified
+    provider interface, enabling chat completion (and optionally streaming,
+    embeddings, and model listing).
+
+    `run` payload actions:
+      - chat_completion  : standard request/response
+      - stream_completion: streaming via generator
+      - list_models      : available model IDs
+      - embeddings       : vector embeddings (optional)
+    """
+
+    DEFAULT_CONFIG: dict[str, Any] = {
+        # "api_key": "",
+        # "base_url": "https://api.example.com/v1",
+        # "default_model": "gpt-4o",
+        # "timeout": 30,
+    }
+
+    def __init__(self) -> None:
+        self.config: dict[str, Any] = {}
+        self._ready: bool = False
+        self._client: Any = None  # replace with actual HTTP client
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Lifecycle
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def init(self, config: dict[str, Any]) -> None:
+        """Called once by OpenClaw after the plugin is loaded.
+
+        Args:
+            config: Merged config from openclaw.plugin.json and user settings.
+        """
+        self.config = {**self.DEFAULT_CONFIG, **config}
+        # TODO: initialize HTTP client, validate API key, etc.
+        # Example: self._client = httpx.Client(base_url=self.config["base_url"])
+        self._ready = True
+        logger.info("[{{ plugin_name }}] initialized with model=%s", self.config.get("default_model"))
+
+    def run(self, payload: dict[str, Any]) -> Any:
+        """Dispatch a provider operation.
+
+        Args:
+            payload: {
+                "action": "chat_completion" | "stream_completion" | "list_models" | "embeddings",
+                "model": str,      # optional override
+                "messages": list,  # for chat actions
+                "inputs": list,    # for embeddings
+                ...
+            }
+
+        Returns:
+            OpenClaw-compatible response dict, or a generator for streaming.
+        """
+        if not self._ready:
+            raise RuntimeError("Plugin not initialized. Call init() first.")
+
+        action = payload.get("action", "chat_completion")
+        dispatch = {
+            "chat_completion": self._chat_completion,
+            "stream_completion": self._stream_completion,
+            "list_models": self._list_models,
+            "embeddings": self._embeddings,
+        }
+        handler = dispatch.get(action)
+        if handler is None:
+            raise ValueError(f"Unknown provider action: {action!r}")
+        return handler(payload)
+
+    def shutdown(self) -> None:
+        """Called by OpenClaw before the plugin is unloaded."""
+        self._ready = False
+        if self._client is not None:
+            # TODO: self._client.close()
+            pass
+        logger.info("[{{ plugin_name }}] shut down.")
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Provider operations — replace stubs with real API calls
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def _chat_completion(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Non-streaming chat completion."""
+        model = payload.get("model", self.config.get("default_model", ""))
+        messages = payload.get("messages", [])
+        logger.debug("[{{ plugin_name }}] chat_completion model=%s msgs=%d", model, len(messages))
+
+        # TODO: call self._client and parse response
+        # Example stub response:
+        return {
+            "id": "stub-response-id",
+            "model": model,
+            "choices": [
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": f"[{{ plugin_name }}] stub response for {len(messages)} messages",
+                    },
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+        }
+
+    def _stream_completion(self, payload: dict[str, Any]) -> Generator[dict[str, Any], None, None]:
+        """Streaming chat completion — yields SSE-style delta chunks."""
+        model = payload.get("model", self.config.get("default_model", ""))
+        messages = payload.get("messages", [])
+        # TODO: implement real streaming
+        stub_text = f"[{{ plugin_name }}] streaming stub"
+        for token in stub_text.split():
+            yield {
+                "id": "stream-stub",
+                "model": model,
+                "choices": [{"delta": {"content": token + " "}, "finish_reason": None}],
+            }
+        yield {"choices": [{"delta": {}, "finish_reason": "stop"}]}
+
+    def _list_models(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Return available model IDs."""
+        # TODO: fetch from API or return static list
+        return {
+            "models": [
+                {"id": "model-stub-1", "name": "Stub Model 1"},
+                {"id": "model-stub-2", "name": "Stub Model 2"},
+            ]
+        }
+
+    def _embeddings(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Generate vector embeddings for input texts."""
+        inputs = payload.get("inputs", [])
+        model = payload.get("model", self.config.get("default_model", ""))
+        # TODO: call embeddings API
+        return {
+            "model": model,
+            "data": [{"index": i, "embedding": [0.0] * 1536} for i in range(len(inputs))],
+        }
