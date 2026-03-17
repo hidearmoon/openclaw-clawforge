@@ -43,8 +43,10 @@
 > Get a plugin running in under 30 seconds.
 
 ```bash
-# Install
-pip install clawforge
+# Install (from source — PyPI release coming soon, see Installation section)
+git clone https://github.com/hidearmoon/openclaw-clawforge.git
+cd openclaw-clawforge
+pip install -e .
 
 # Scaffold a new "tool" plugin
 clawforge init --type tool --name my-tool
@@ -70,13 +72,13 @@ curl -X POST http://localhost:9621/run/my-tool \
 ## Installation
 
 ```bash
-# From PyPI (recommended)
-pip install clawforge
-
-# From source
+# From source (current method — PyPI release pending)
 git clone https://github.com/hidearmoon/openclaw-clawforge.git
 cd openclaw-clawforge
 pip install -e ".[dev]"
+
+# From PyPI (coming soon — will switch to this once published)
+# pip install clawforge
 ```
 
 **Requirements:** Python ≥ 3.9

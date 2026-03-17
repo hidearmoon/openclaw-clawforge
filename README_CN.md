@@ -43,8 +43,10 @@
 > 30 秒内跑起来。
 
 ```bash
-# 安装
-pip install clawforge
+# 安装（从源码安装——PyPI 版本即将发布，详见安装章节）
+git clone https://github.com/hidearmoon/openclaw-clawforge.git
+cd openclaw-clawforge
+pip install -e .
 
 # 生成一个 tool 类型插件
 clawforge init --type tool --name my-tool
@@ -70,13 +72,13 @@ curl -X POST http://localhost:9621/run/my-tool \
 ## 安装
 
 ```bash
-# 从 PyPI 安装（推荐）
-pip install clawforge
-
-# 从源码安装
+# 从源码安装（当前方式——PyPI 发布待完成）
 git clone https://github.com/hidearmoon/openclaw-clawforge.git
 cd openclaw-clawforge
 pip install -e ".[dev]"
+
+# 从 PyPI 安装（即将支持——发布后切换为此方式）
+# pip install clawforge
 ```
 
 **系统要求：** Python ≥ 3.9
