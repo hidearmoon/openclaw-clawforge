@@ -19,18 +19,26 @@ keywords = [
     "hot-reload",
     "sandbox",
     "ai-assistant",
+    "code-generator",
+    "plugin-development",
+    "dev-tools",
+    "template",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Code Generators",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Topic :: Software Development :: Testing",
     "Topic :: Utilities",
 ]
 dependencies = [
@@ -44,9 +52,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/hidearmoon/clawforge"
-Repository = "https://github.com/hidearmoon/clawforge"
-"Bug Tracker" = "https://github.com/hidearmoon/clawforge/issues"
+Homepage = "https://github.com/hidearmoon/openclaw-clawforge"
+Repository = "https://github.com/hidearmoon/openclaw-clawforge"
+"Bug Tracker" = "https://github.com/hidearmoon/openclaw-clawforge/issues"
+Changelog = "https://github.com/hidearmoon/openclaw-clawforge/releases"
 
 [project.scripts]
 clawforge = "clawforge.cli:main"

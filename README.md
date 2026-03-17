@@ -1,283 +1,314 @@
-# ClawForge
+<!-- Language Switch | 语言切换 -->
+<p align="right">
+  <a href="README.md">English</a> · <a href="README_CN.md">中文</a>
+</p>
 
-**OpenClaw Plugin Development Scaffold & Hot-Reload Dev Sandbox**
+<div align="center">
 
-> 为 OpenClaw 插件开发者打造的脚手架工具：一键生成插件模板、本地热重载沙箱调试、HTTP 控制接口。
+```
+   ___  _                 ___
+  / __\| |  __ _ __  __ / __\ ___  _ __  __ _  ___
+ / /   | | / _` |\ \/ // /   / _ \| '__|/ _` |/ _ \
+/ /___ | || (_| | >  </ /___| (_) | |  | (_| |  __/
+\____/ |_| \__,_|/_/\_\\____/ \___/|_|   \__, |\___|
+                                          |___/
+```
 
-[![PyPI](https://img.shields.io/pypi/v/clawforge)](https://pypi.org/project/clawforge/)
-[![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
+**ClawForge** — OpenClaw Plugin Development Scaffold & Toolchain
+
+[![PyPI version](https://img.shields.io/pypi/v/clawforge?color=brightgreen)](https://pypi.org/project/clawforge/)
+[![Python](https://img.shields.io/badge/python-3.9%20|%203.10%20|%203.11%20|%203.12-blue)](https://www.python.org/)
+[![CI](https://github.com/hidearmoon/openclaw-clawforge/actions/workflows/ci.yml/badge.svg)](https://github.com/hidearmoon/openclaw-clawforge/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/hidearmoon/openclaw-clawforge/pulls)
+
+</div>
 
 ---
 
-## English
+> **ClawForge** is the official developer toolchain for [OpenClaw](https://github.com/openclaw) plugin authors. Scaffold a production-ready plugin in seconds, iterate with hot-reload, and validate compatibility before publishing — all from one CLI.
 
-### What is ClawForge?
+## Features
 
-ClawForge is a developer toolkit for building [OpenClaw](https://github.com/openclaw) plugins. It fills the gap between `claw-init` (general project scaffold) and a full plugin release:
+- 🚀 **`clawforge init`** — One-command scaffold for all 4 OpenClaw plugin types (`tool`, `channel`, `memory`, `provider`). Generates manifest, interface skeleton, test stubs, and README.
+- 🔥 **`clawforge dev`** — Local hot-reload sandbox. Edit your plugin and watch it reload instantly — no server restart needed. Includes an HTTP control API at `localhost:9621`.
+- 🧪 **`clawforge test`** — Compatibility test suite. Validates manifest completeness, interface compliance (`init`/`run`/`shutdown`), directory structure, and dependency listings before you publish.
+- 🎨 **Rich terminal UI** — Color-coded output, structured tables, progress feedback — not just plain text.
+- 📦 **CI-ready** — `--json` flag on `clawforge test` for machine-readable output, pipeable to `jq`.
 
-| Feature | Description |
-|---------|-------------|
-| `clawforge init` | Scaffold any of 4 plugin types with manifest, interface skeleton, tests, and README |
-| `clawforge dev` | Local sandbox with hot-reload — edit & see changes instantly, no restart needed |
-| HTTP control API | Invoke `plugin.run()` via `curl` / Postman at `http://localhost:9621` |
+---
 
-**Plugin types supported:** `tool` · `channel` · `memory` · `provider`
+## Quick Start
 
-### Quick Start (30 seconds)
+> Get a plugin running in under 30 seconds.
 
 ```bash
-# 1. Install
+# Install
 pip install clawforge
 
-# 2. Scaffold a new tool plugin
+# Scaffold a new "tool" plugin
 clawforge init --type tool --name my-tool
 
-# 3. Enter the generated directory
+# Enter the generated directory
 cd my-tool
 
-# 4. Start hot-reload sandbox
+# Start the hot-reload sandbox
 clawforge dev .
 ```
 
-The sandbox starts at `http://localhost:9621`. Edit `my_tool.py` and the plugin reloads automatically.
-
-### Installation
+The sandbox is now live at **`http://localhost:9621`**. Edit `my_tool.py` — the plugin reloads automatically on every save.
 
 ```bash
-pip install clawforge
-# or from source:
-git clone https://github.com/hidearmoon/clawforge
-cd clawforge
-pip install -e .
-```
-
-Requirements: Python ≥ 3.9
-
-### Commands
-
-#### `clawforge init`
-
-Scaffold a new plugin interactively or with flags:
-
-```bash
-# Interactive mode (guided prompts)
-clawforge init
-
-# Non-interactive mode
-clawforge init --type tool     --name my-tool --description "My tool" --author Alice
-clawforge init --type channel  --name tg-bot
-clawforge init --type memory   --name sqlite-memory
-clawforge init --type provider --name openrouter-provider
-```
-
-**Options:**
-
-| Option | Description |
-|--------|-------------|
-| `--type` | Plugin type: `tool`, `channel`, `memory`, `provider` |
-| `--name` | Plugin name (kebab-case) |
-| `--description` | Short description |
-| `--author` | Author name |
-| `--version` | Initial version (default: `0.1.0`) |
-| `--output-dir`, `-o` | Output directory (default: `./<name>`) |
-| `--force`, `-f` | Overwrite existing files |
-
-**Generated files:**
-
-```
-my-tool/
-├── openclaw.plugin.json   ← plugin manifest
-├── my_tool.py             ← IPlugin implementation skeleton
-├── test_my_tool.py        ← pytest test stubs
-├── README.md
-└── .gitignore
-```
-
-#### `clawforge dev`
-
-Start a local sandbox for iterative development:
-
-```bash
-clawforge dev .                  # watch current directory
-clawforge dev ./my-tool --port 9000
-clawforge dev . --no-watch       # disable auto-reload
-clawforge dev . --no-server      # no HTTP API, just load + watch
-```
-
-**Options:**
-
-| Option | Description |
-|--------|-------------|
-| `PLUGIN_DIR` | Directory with `openclaw.plugin.json` (default: `.`) |
-| `--port`, `-p` | HTTP API port (default: `9621`) |
-| `--no-watch` | Disable hot-reload file watcher |
-| `--no-server` | Skip HTTP server |
-
-**HTTP API (port 9621):**
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/` | Health + plugin list |
-| `GET` | `/plugins` | All registered plugins |
-| `POST` | `/run/{name}` | Invoke `plugin.run(payload)` |
-| `POST` | `/reload/{name}` | Manually trigger reload |
-| `GET` | `/status` | Plain-text registry status |
-
-```bash
-# Invoke your plugin
+# Invoke your plugin via HTTP
 curl -X POST http://localhost:9621/run/my-tool \
      -H "Content-Type: application/json" \
      -d '{"input": "hello world"}'
-
-# Manual reload
-curl -X POST http://localhost:9621/reload/my-tool
 ```
 
-### Plugin Interface
+---
 
-All plugins implement three lifecycle methods:
+## Installation
+
+```bash
+# From PyPI (recommended)
+pip install clawforge
+
+# From source
+git clone https://github.com/hidearmoon/openclaw-clawforge.git
+cd openclaw-clawforge
+pip install -e ".[dev]"
+```
+
+**Requirements:** Python ≥ 3.9
+
+---
+
+## Commands
+
+### `clawforge init`
+
+Scaffold a new OpenClaw plugin — interactively or fully non-interactive.
+
+```bash
+# Interactive (guided prompts)
+clawforge init
+
+# Non-interactive (all flags provided)
+clawforge init --type tool     --name my-tool       --description "My tool"  --author Alice
+clawforge init --type channel  --name telegram-bot  --author Bob
+clawforge init --type memory   --name sqlite-store
+clawforge init --type provider --name openrouter
+```
+
+**Options:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--type` | prompted | Plugin type: `tool` `channel` `memory` `provider` |
+| `--name` | prompted | Plugin name in kebab-case |
+| `--description` | `""` | Short description shown in the marketplace |
+| `--author` | `""` | Author name |
+| `--version` | `0.1.0` | Initial semantic version |
+| `--output-dir`, `-o` | `./<name>` | Custom output path |
+| `--force`, `-f` | off | Overwrite files that already exist |
+
+**Generated project layout:**
+
+```
+my-tool/
+├── openclaw.plugin.json   ← OpenClaw plugin manifest
+├── my_tool.py             ← IPlugin implementation skeleton
+├── test_my_tool.py        ← pytest test stubs (ready to run)
+├── README.md              ← Plugin-specific README
+└── .gitignore
+```
+
+---
+
+### `clawforge dev`
+
+Start a local sandbox with hot-reload and an HTTP API for manual plugin invocation.
+
+```bash
+clawforge dev .                      # watch current directory
+clawforge dev ./my-tool              # watch specific plugin directory
+clawforge dev ./my-tool --port 9000  # custom port
+clawforge dev . --no-watch           # load once, disable file watcher
+clawforge dev . --no-server          # no HTTP API, just load + watch
+```
+
+**Options:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `PLUGIN_DIR` | `.` | Directory containing `openclaw.plugin.json` |
+| `--port`, `-p` | `9621` | HTTP API port |
+| `--no-watch` | off | Disable hot-reload file watcher |
+| `--no-server` | off | Skip HTTP server entirely |
+
+**HTTP Control API:**
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/` | Health check + plugin list |
+| `GET` | `/plugins` | All registered plugins with metadata |
+| `POST` | `/run/{name}` | Invoke `plugin.run(payload)` |
+| `POST` | `/reload/{name}` | Manually trigger plugin reload |
+| `GET` | `/status` | Plain-text registry status |
+
+```bash
+# Invoke plugin
+curl -X POST http://localhost:9621/run/my-tool \
+     -H "Content-Type: application/json" \
+     -d '{"key": "value"}'
+
+# Trigger manual reload
+curl -X POST http://localhost:9621/reload/my-tool
+
+# Check what's loaded
+curl http://localhost:9621/status
+```
+
+---
+
+### `clawforge test`
+
+Run a full compatibility check suite against a plugin directory. Use this before `clawforge publish`.
+
+```bash
+clawforge test .               # check current directory
+clawforge test ./my-tool       # check a specific plugin
+clawforge test . --json        # machine-readable output (for CI)
+clawforge test . --json | jq .summary
+```
+
+**Checks performed:**
+
+| # | Category | What it validates |
+|---|----------|-------------------|
+| 1 | **Manifest** | `openclaw.plugin.json` exists, valid JSON, required fields present, semver version, `module:ClassName` entry format, entry file exists |
+| 2 | **Interface** | Plugin class importable, `init(config)` / `run(payload)` / `shutdown()` all present with correct signatures |
+| 3 | **Structure** | README file present, `.gitignore` present, test files present |
+| 4 | **Dependencies** | `requirements.txt` or `pyproject.toml` present and parseable |
+
+**Exit codes:**
+
+| Code | Meaning |
+|------|---------|
+| `0` | All checks passed (warnings are non-blocking) |
+| `1` | One or more checks **failed** |
+
+**JSON output (for CI scripting):**
+
+```bash
+clawforge test . --json | jq .
+# {
+#   "plugin_dir": "/abs/path/my-tool",
+#   "results": [...],
+#   "summary": { "pass": 14, "fail": 0, "warn": 2 }
+# }
+```
+
+---
+
+## Plugin Types
+
+| Type | Use Case | Example |
+|------|----------|---------|
+| `tool` | Extend OpenClaw with custom capabilities | web search, calculator, code runner |
+| `channel` | Add new input/output channels | Telegram bot, Slack webhook, Discord |
+| `memory` | Custom memory backends | SQLite, Redis, vector database |
+| `provider` | New LLM API adapters | OpenRouter, Replicate, local Ollama |
+
+---
+
+## Plugin Interface
+
+Every plugin implements three lifecycle methods:
 
 ```python
+from clawforge.sandbox import IPlugin
+
 class MyPlugin(IPlugin):
     def init(self, config: dict) -> None:
-        """Called once on load — validate config, create clients."""
+        """Called once on load. Validate config and create clients here."""
+        self.timeout = config.get("timeout", 10)
 
     def run(self, payload: dict) -> Any:
-        """Main invocation — called on each request."""
+        """Called on every invocation. Return any JSON-serializable value."""
+        return {"result": f"processed: {payload}"}
 
     def shutdown(self) -> None:
-        """Called before unload — close connections, flush data."""
+        """Called before unload. Close connections, flush buffers."""
+        pass
 ```
 
-### Plugin Manifest (`openclaw.plugin.json`)
+---
+
+## Plugin Manifest
+
+`openclaw.plugin.json` is the single source of truth for plugin identity and metadata:
 
 ```json
 {
   "name": "my-tool",
   "version": "0.1.0",
-  "description": "My tool plugin",
+  "description": "My custom tool plugin",
   "author": "Alice",
   "type": "tool",
   "engine": ">=0.1.0",
   "entry": "my_tool:MyTool",
   "permissions": ["network"],
-  "config": { "timeout": 10 }
+  "config": {
+    "timeout": 10
+  }
 }
 ```
 
----
-
-## 中文文档
-
-### 什么是 ClawForge？
-
-ClawForge 是专为 [OpenClaw](https://github.com/openclaw) 插件开发者打造的脚手架工具，填补了通用脚手架 `claw-init` 和插件正式发布之间的空白：
-
-| 功能 | 说明 |
-|------|------|
-| `clawforge init` | 一键生成 4 种插件类型的清单文件、接口骨架、测试桩和 README |
-| `clawforge dev` | 本地热重载沙箱——修改代码立即生效，无需重启 |
-| HTTP 控制接口 | 通过 `curl` / Postman 在 `http://localhost:9621` 手动触发插件 `run()` |
-
-**支持的插件类型：** `tool` · `channel` · `memory` · `provider`
-
-### 快速开始（30 秒跑起来）
-
-```bash
-# 1. 安装
-pip install clawforge
-
-# 2. 生成一个 tool 类型插件
-clawforge init --type tool --name my-tool
-
-# 3. 进入生成目录
-cd my-tool
-
-# 4. 启动热重载沙箱
-clawforge dev .
-```
-
-沙箱启动在 `http://localhost:9621`。编辑 `my_tool.py`，插件会自动重新加载。
-
-### `clawforge init` 详解
-
-```bash
-# 交互式模式（有引导提示）
-clawforge init
-
-# 非交互式模式
-clawforge init --type tool --name my-tool --description "我的工具" --author 张三
-```
-
-生成的文件：
-
-```
-my-tool/
-├── openclaw.plugin.json   ← 插件清单
-├── my_tool.py             ← IPlugin 接口骨架实现
-├── test_my_tool.py        ← pytest 测试桩
-├── README.md
-└── .gitignore
-```
-
-### `clawforge dev` 详解
-
-```bash
-clawforge dev .               # 监听当前目录
-clawforge dev ./my-tool --port 9000
-clawforge dev . --no-watch    # 关闭自动重载
-```
-
-**HTTP 控制接口（端口 9621）：**
-
-```bash
-# 调用插件 run()
-curl -X POST http://localhost:9621/run/my-tool \
-     -H "Content-Type: application/json" \
-     -d '{"input": "你好"}'
-
-# 手动重载
-curl -X POST http://localhost:9621/reload/my-tool
-
-# 查看插件状态
-curl http://localhost:9621/status
-```
-
-### 插件接口规范
-
-OpenClaw 插件实现三个生命周期方法：
-
-```python
-class MyPlugin(IPlugin):
-    def init(self, config: dict) -> None:
-        """加载后调用一次——初始化配置、创建客户端"""
-
-    def run(self, payload: dict) -> Any:
-        """主调用入口——每次请求都会调用"""
-
-    def shutdown(self) -> None:
-        """卸载前调用——关闭连接、刷新缓冲区"""
-```
-
-### 插件清单（openclaw.plugin.json）字段说明
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `name` | string | 插件名（kebab-case） |
-| `version` | string | 语义化版本 |
-| `type` | string | `tool` / `channel` / `memory` / `provider` |
-| `engine` | string | 兼容的 OpenClaw 版本范围（如 `>=0.1.0`） |
-| `entry` | string | `模块名:类名`（如 `my_tool:MyTool`） |
-| `permissions` | array | 所需权限声明（如 `network`、`fs`） |
-| `config` | object | 插件默认配置 |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | ✅ | Plugin name (kebab-case) |
+| `version` | string | ✅ | Semantic version (`x.y.z`) |
+| `type` | string | ✅ | `tool` / `channel` / `memory` / `provider` |
+| `engine` | string | ✅ | Compatible OpenClaw version range (e.g. `>=0.1.0`) |
+| `entry` | string | ✅ | `module:ClassName` (e.g. `my_tool:MyTool`) |
+| `description` | string | — | Short description |
+| `author` | string | — | Author name |
+| `permissions` | array | — | Required permissions: `network`, `fs`, `env` |
+| `config` | object | — | Default configuration values |
 
 ---
 
-## Contributing / 贡献
+## Configuration
 
-Issues and PRs welcome at [github.com/hidearmoon/clawforge](https://github.com/hidearmoon/clawforge).
+ClawForge itself has no configuration file — all options are passed as CLI flags. The plugin's own runtime config lives in the `config` block of `openclaw.plugin.json` and is passed to `plugin.init(config)` when the sandbox loads.
+
+---
+
+## Contributing
+
+Contributions are welcome! Please open an issue first for major changes.
+
+```bash
+# Clone and set up dev environment
+git clone https://github.com/hidearmoon/openclaw-clawforge.git
+cd openclaw-clawforge
+pip install -e ".[dev]"
+
+# Run the test suite
+pytest --tb=short -q
+
+# Run against a specific Python version
+python3.11 -m pytest --tb=short
+```
+
+**Before opening a PR:**
+- All 62+ tests must pass: `pytest`
+- New features need corresponding tests
+- Follow existing code style (no formatter required, just match the surrounding code)
+
+---
 
 ## License
 
-MIT © OpenClaw Labs
+[MIT](LICENSE) © 2024 OpenClaw Labs
