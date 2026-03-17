@@ -9,6 +9,7 @@ from rich.text import Text
 from clawforge import __version__
 from clawforge.init_cmd import init
 from clawforge.dev_cmd import dev
+from clawforge.test_cmd import test
 
 console = Console()
 
@@ -31,6 +32,7 @@ def main():
     Commands:
       init    Scaffold a new OpenClaw plugin from template
       dev     Start local dev sandbox with hot-reload
+      test    Run compatibility checks on a plugin directory
 
     \b
     Quick start:
@@ -43,6 +45,7 @@ def main():
 
 main.add_command(init)
 main.add_command(dev)
+main.add_command(test)
 
 
 if __name__ == "__main__":

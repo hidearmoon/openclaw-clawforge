@@ -59,6 +59,7 @@ include = ["clawforge*"]
 dev = [
     "pytest>=7.4",
     "pytest-timeout>=2.1",
+    "pytest-cov>=4.0",
 ]
 
 [tool.pytest.ini_options]
