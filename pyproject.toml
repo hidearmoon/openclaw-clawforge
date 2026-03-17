@@ -70,6 +70,10 @@ dev = [
     "pytest-timeout>=2.1",
     "pytest-cov>=4.0",
 ]
+publish = [
+    "build>=1.0",
+    "twine>=4.0",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

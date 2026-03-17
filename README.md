@@ -33,8 +33,9 @@
 - 🚀 **`clawforge init`** — One-command scaffold for all 4 OpenClaw plugin types (`tool`, `channel`, `memory`, `provider`). Generates manifest, interface skeleton, test stubs, and README.
 - 🔥 **`clawforge dev`** — Local hot-reload sandbox. Edit your plugin and watch it reload instantly — no server restart needed. Includes an HTTP control API at `localhost:9621`.
 - 🧪 **`clawforge test`** — Compatibility test suite. Validates manifest completeness, interface compliance (`init`/`run`/`shutdown`), directory structure, and dependency listings before you publish.
+- 🚢 **`clawforge publish`** — One-command release pipeline. Generates CHANGELOG from git log, builds wheel + sdist, uploads to PyPI, and creates a GitHub Release with artifacts attached.
 - 🎨 **Rich terminal UI** — Color-coded output, structured tables, progress feedback — not just plain text.
-- 📦 **CI-ready** — `--json` flag on `clawforge test` for machine-readable output, pipeable to `jq`.
+- 📦 **CI-ready** — `--json` flag on `clawforge test` and `clawforge publish` for machine-readable output, pipeable to `jq`.
 
 ---
 
@@ -210,6 +211,67 @@ clawforge test . --json | jq .
 #   "summary": { "pass": 14, "fail": 0, "warn": 2 }
 # }
 ```
+
+---
+
+### `clawforge publish`
+
+Package and publish an OpenClaw plugin to PyPI and/or create a GitHub Release — one command does it all.
+
+```bash
+# Build only (no upload) — useful for local testing
+clawforge publish . --dry-run
+
+# Publish to PyPI (token via env var)
+export PYPI_TOKEN=pypi-...
+clawforge publish .
+
+# Publish to TestPyPI
+clawforge publish . --repository-url https://test.pypi.org/legacy/
+
+# Full release: PyPI + GitHub Release
+export PYPI_TOKEN=pypi-...
+export GITHUB_TOKEN=ghp_...
+export GITHUB_REPOSITORY=myorg/my-plugin
+clawforge publish .
+
+# Skip pre-flight checks (not recommended)
+clawforge publish . --no-test
+
+# Machine-readable summary (for CI)
+clawforge publish . --dry-run --json | jq .
+```
+
+**Publish steps (in order):**
+
+| # | Step | Description |
+|---|------|-------------|
+| 1 | **Pre-flight checks** | Runs `clawforge test` — fails fast if compatibility checks don't pass |
+| 2 | **CHANGELOG.md** | Generates a new version entry from `git log` since the last tag |
+| 3 | **Build** | Produces a wheel (`.whl`) + source dist (`.tar.gz`) via `python -m build` |
+| 4 | **PyPI upload** | Uploads via `twine` (requires `PYPI_TOKEN` or `--token`) |
+|   | **GitHub Release** | Creates a release + uploads artifacts (requires `GITHUB_TOKEN` + `GITHUB_REPOSITORY`) |
+
+**Install publish extras** (build + twine):
+
+```bash
+pip install 'clawforge[publish]'
+```
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--dry-run` | Build artifacts, skip all uploads |
+| `--no-test` | Skip pre-flight compatibility checks |
+| `--no-changelog` | Skip CHANGELOG.md generation |
+| `--token TOKEN` | PyPI API token (overrides `PYPI_TOKEN` env var) |
+| `--github-token TOKEN` | GitHub token (overrides `GITHUB_TOKEN` env var) |
+| `--repo OWNER/NAME` | GitHub repository (overrides `GITHUB_REPOSITORY` env var) |
+| `--repository-url URL` | Custom PyPI index (e.g. TestPyPI) |
+| `--json` | Emit machine-readable JSON summary |
+
+**Exit codes:** `0` = success, `1` = one or more steps failed.
 
 ---
 
