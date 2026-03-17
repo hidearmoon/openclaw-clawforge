@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type 'publish' to confirm manual release"
+        required: true
 
 jobs:
   test:
@@ -59,7 +64,7 @@ jobs:
       name: pypi
       url: https://pypi.org/project/clawforge/
     permissions:
-      id-token: write   # OIDC trusted publisher
+      id-token: write   # required for OIDC trusted publisher
 
     steps:
       - name: Download dist artifacts
@@ -68,5 +73,18 @@ jobs:
           name: dist
           path: dist/
 
+      # Dual-mode publishing:
+      #
+      # Mode A — OIDC Trusted Publisher (preferred, no stored secrets):
+      #   Set up once at https://pypi.org/manage/account/publishing/
+      #   Leave the PYPI_TOKEN secret unset; the action uses OIDC automatically.
+      #   See RELEASING.md §OIDC Setup for exact field values.
+      #
+      # Mode B — API token fallback:
+      #   Create a PyPI token at https://pypi.org/manage/account/token/
+      #   Add it as repo secret PYPI_TOKEN in Settings → Secrets → Actions.
+      #   The action prefers the token over OIDC when the input is non-empty.
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_TOKEN }}
