@@ -5,7 +5,6 @@ so developers can load and test plugins locally without a full OpenClaw install.
 
 from __future__ import annotations
 
-import importlib
 import importlib.util
 import json
 import logging
@@ -17,7 +16,6 @@ from typing import Any
 
 from rich.console import Console
 from rich.logging import RichHandler
-from rich.panel import Panel
 from rich.table import Table
 
 console = Console()
@@ -31,6 +29,10 @@ logging.basicConfig(
     handlers=[RichHandler(console=console, rich_tracebacks=True, markup=True)],
 )
 logger = logging.getLogger("clawforge.sandbox")
+
+# Prefix for all plugin modules registered in sys.modules.
+# Ensures plugin module names never collide with stdlib or third-party packages.
+_MODULE_KEY_PREFIX = "_clawforge_plugin__"
 
 
 # ── Data classes ──────────────────────────────────────────────────────────────
@@ -47,6 +49,11 @@ class PluginRecord:
     source_dir: Path
     loaded: bool = False
     error: str | None = None
+    # Internal: namespaced sys.modules key used for this plugin's entry module.
+    # Prefixed with _MODULE_KEY_PREFIX to guarantee no collision with real modules.
+    _module_key: str = field(default="", repr=False)
+    # Internal: sys.path entry added for this plugin (None if already present).
+    _sys_path_entry: str | None = field(default=None, repr=False)
 
 
 # ── Sandbox registry ──────────────────────────────────────────────────────────
@@ -60,6 +67,24 @@ class SandboxRegistry:
     - Dynamically import and instantiate plugin classes
     - Call lifecycle methods (init / shutdown)
     - Track registered plugins with status
+
+    Module isolation strategy
+    -------------------------
+    Plugin entry modules are loaded via ``importlib.util.spec_from_file_location``
+    and registered in ``sys.modules`` under a namespaced key::
+
+        _clawforge_plugin__{plugin_name}__{module_path}
+
+    This means a plugin whose entry module is named ``utils`` will never shadow
+    the stdlib ``utils`` (or any other package), and cleanup is 100% scoped —
+    no third-party library imported *by* the plugin is ever touched.
+
+    sys.path management
+    -------------------
+    The plugin directory is added to ``sys.path`` when the plugin is loaded and
+    removed when the plugin is unloaded.  Keeping the path live during the plugin
+    lifetime allows plugins to use lazy imports (imports inside methods) without
+    failure.
     """
 
     MANIFEST_FILENAME = "openclaw.plugin.json"
@@ -72,7 +97,9 @@ class SandboxRegistry:
     def load_plugin(self, plugin_dir: Path) -> PluginRecord | None:
         """Load (or reload) a plugin from a directory containing a manifest.
 
-        Returns the PluginRecord on success, or None on failure.
+        Returns the PluginRecord on success, or None if the manifest is missing
+        or cannot be parsed.  Import/init failures produce a PluginRecord with
+        ``loaded=False`` rather than raising.
         """
         plugin_dir = plugin_dir.resolve()
         manifest_path = plugin_dir / self.MANIFEST_FILENAME
@@ -99,8 +126,8 @@ class SandboxRegistry:
             self._unload(plugin_name)
 
         # ── Dynamic import ────────────────────────────────────────────────────
-        instance = self._import_plugin(plugin_dir, entry, plugin_name)
-        if instance is None:
+        import_result = self._import_plugin(plugin_dir, entry, plugin_name)
+        if import_result is None:
             record = PluginRecord(
                 name=plugin_name,
                 plugin_type=plugin_type,
@@ -116,12 +143,17 @@ class SandboxRegistry:
             self._plugins[plugin_name] = record
             return record
 
+        instance, module_key, sys_path_entry = import_result
+
         # ── Call init() ───────────────────────────────────────────────────────
         try:
             instance.init(config)
             loaded = True
             error = None
-            logger.info("[green]✓[/green] Plugin [bold]%s[/bold] v%s loaded (%s)", plugin_name, version, plugin_type)
+            logger.info(
+                "[green]✓[/green] Plugin [bold]%s[/bold] v%s loaded (%s)",
+                plugin_name, version, plugin_type,
+            )
         except Exception as exc:
             loaded = False
             error = f"{type(exc).__name__}: {exc}"
@@ -139,6 +171,8 @@ class SandboxRegistry:
             source_dir=plugin_dir,
             loaded=loaded,
             error=error,
+            _module_key=module_key,
+            _sys_path_entry=sys_path_entry,
         )
         self._plugins[plugin_name] = record
         return record
@@ -214,19 +248,47 @@ class SandboxRegistry:
                 record.instance.shutdown()
             except Exception as exc:
                 logger.warning("Plugin %s shutdown() raised: %s", plugin_name, exc)
-        # Remove cached module so reimport picks up file changes
-        module_name = record.entry.split(":")[0] if ":" in record.entry else record.entry
-        for key in list(sys.modules.keys()):
-            if key == module_name or key.startswith(module_name + "."):
-                del sys.modules[key]
+
+        # Remove only the plugin's own namespaced module keys from sys.modules.
+        # Third-party libraries imported by the plugin are registered under their
+        # own names (e.g. "requests") and will NOT be touched here.
+        if record._module_key:
+            prefix = record._module_key
+            for key in list(sys.modules.keys()):
+                if key == prefix or key.startswith(prefix + "."):
+                    del sys.modules[key]
+
+        # Remove the sys.path entry we added for this plugin (if any).
+        if record._sys_path_entry and record._sys_path_entry in sys.path:
+            sys.path.remove(record._sys_path_entry)
+
         del self._plugins[plugin_name]
         logger.info("[dim]Unloaded plugin %s[/dim]", plugin_name)
         return True
 
-    def _import_plugin(self, plugin_dir: Path, entry: str, plugin_name: str) -> Any | None:
+    def _import_plugin(
+        self,
+        plugin_dir: Path,
+        entry: str,
+        plugin_name: str,
+    ) -> tuple[Any, str, str | None] | None:
         """
-        Dynamically import a plugin class from `entry` string (module:ClassName).
-        Adds plugin_dir to sys.path temporarily if not already present.
+        Dynamically import a plugin class from ``entry`` (``module:ClassName``).
+
+        Returns ``(instance, module_key, sys_path_entry)`` on success or ``None``
+        on failure.  The caller is responsible for storing these values in the
+        PluginRecord so that ``_unload`` can clean up correctly.
+
+        Isolation guarantees
+        --------------------
+        * The entry module is loaded via ``spec_from_file_location`` and
+          registered in ``sys.modules`` under a namespaced key that starts with
+          ``_clawforge_plugin__``.  This prevents the plugin module from
+          shadowing any stdlib or third-party package, regardless of what the
+          developer chose to name it.
+        * The ``plugin_dir`` is added to ``sys.path`` and kept there until the
+          plugin is unloaded, so that lazy imports (imports inside methods) and
+          sibling-module imports work correctly.
         """
         if ":" not in entry:
             logger.error("Entry '%s' must be in 'module:ClassName' format", entry)
@@ -235,27 +297,65 @@ class SandboxRegistry:
         module_path, class_name = entry.rsplit(":", 1)
         plugin_dir_str = str(plugin_dir)
 
-        # Add to sys.path so the module can be imported
-        path_added = False
+        # Build a unique, namespaced key for sys.modules.
+        safe_name = plugin_name.replace("-", "_")
+        module_key = f"{_MODULE_KEY_PREFIX}{safe_name}__{module_path}"
+
+        # Add plugin_dir to sys.path so sibling imports and lazy imports work.
+        # We track whether we added it so _unload can remove it.
+        sys_path_entry: str | None = None
         if plugin_dir_str not in sys.path:
             sys.path.insert(0, plugin_dir_str)
-            path_added = True
+            sys_path_entry = plugin_dir_str
 
         try:
-            # Force re-import (handles hot reload)
-            if module_path in sys.modules:
-                del sys.modules[module_path]
+            # Evict any previously cached version under our namespaced key.
+            for key in list(sys.modules.keys()):
+                if key == module_key or key.startswith(module_key + "."):
+                    del sys.modules[key]
 
-            module = importlib.import_module(module_path)
+            # Locate the module file.
+            module_file = plugin_dir / f"{module_path.replace('.', '/')}.py"
+            if not module_file.exists():
+                logger.error(
+                    "Module file '%s' not found in plugin dir '%s'",
+                    module_file.name, plugin_dir,
+                )
+                if sys_path_entry and sys_path_entry in sys.path:
+                    sys.path.remove(sys_path_entry)
+                return None
+
+            spec = importlib.util.spec_from_file_location(module_key, module_file)
+            if spec is None or spec.loader is None:
+                logger.error("Cannot create module spec for %s", module_file)
+                if sys_path_entry and sys_path_entry in sys.path:
+                    sys.path.remove(sys_path_entry)
+                return None
+
+            module = importlib.util.module_from_spec(spec)
+            # Register before exec so circular imports within the plugin work.
+            sys.modules[module_key] = module
+            spec.loader.exec_module(module)  # type: ignore[union-attr]
+
             cls = getattr(module, class_name, None)
             if cls is None:
-                logger.error("Class '%s' not found in module '%s'", class_name, module_path)
+                logger.error(
+                    "Class '%s' not found in module '%s'", class_name, module_path
+                )
+                del sys.modules[module_key]
+                if sys_path_entry and sys_path_entry in sys.path:
+                    sys.path.remove(sys_path_entry)
                 return None
-            return cls()
+
+            return cls(), module_key, sys_path_entry
+
         except Exception as exc:
-            logger.error("Failed to import plugin %s from %s: %s", plugin_name, entry, exc)
+            logger.error(
+                "Failed to import plugin %s from %s: %s", plugin_name, entry, exc
+            )
             traceback.print_exc()
+            # Clean up any partial module registration.
+            sys.modules.pop(module_key, None)
+            if sys_path_entry and sys_path_entry in sys.path:
+                sys.path.remove(sys_path_entry)
             return None
-        finally:
-            if path_added and plugin_dir_str in sys.path:
-                sys.path.remove(plugin_dir_str)
